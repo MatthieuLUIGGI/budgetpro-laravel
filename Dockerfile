@@ -33,15 +33,14 @@ COPY --from=build-frontend /app/public/build ./public/build
 # Installer les dépendances PHP
 RUN composer install --no-dev --optimize-autoloader
 
-# Optimisations Laravel
-RUN php artisan config:clear && \
+# Exposer le port
+EXPOSE 8000
+
+# Commande de démarrage
+CMD php artisan config:clear && \
     php artisan route:clear && \
     php artisan view:clear && \
     php artisan config:cache && \
     php artisan route:cache && \
-    php artisan view:cache
-
-EXPOSE 8000
-
-# Commande de démarrage
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+    php artisan view:cache && \
+    php artisan serve --host=0.0.0.0 --port=8000
