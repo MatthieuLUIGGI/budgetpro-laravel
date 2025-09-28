@@ -1,4 +1,5 @@
 import './bootstrap';
+import '../css/auth.css';
 
 // Version Laravel avec API AJAX
 document.addEventListener('DOMContentLoaded', async function() {
