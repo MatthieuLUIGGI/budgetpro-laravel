@@ -1,5 +1,8 @@
 import './bootstrap';
 
+// Durée par défaut (en ms) pour toutes les notifications
+const DEFAULT_NOTIFICATION_DURATION = 7000; // 7 secondes
+
 // Version Laravel avec API AJAX
 document.addEventListener('DOMContentLoaded', async function() {
     await initApp();
@@ -100,8 +103,7 @@ async function addTransaction() {
         showNotification(
             'success', 
             'Transaction ajoutée !', 
-            `Ajout de "${finalDescription || 'Sans description'}"${formattedAmount} avec succès.`,
-            3000
+            `Ajout de "${finalDescription || 'Sans description'}"${formattedAmount} avec succès.`
         );
         
         // Animation du bouton
@@ -121,8 +123,7 @@ async function addTransaction() {
         showNotification(
             'error',
             'Erreur',
-            "Impossible d'ajouter la transaction. Veuillez réessayer.",
-            5000
+            "Impossible d'ajouter la transaction. Veuillez réessayer."
         );
         
         // Réinitialiser le bouton
@@ -140,7 +141,7 @@ async function deleteTransaction(id) {
         'warning',
         'Confirmer la suppression',
         `Supprimer "${transaction.description}" de "${transaction.amount}"€ ? Cette action est irréversible.`,
-        0 // Durée infinie jusqu'à action utilisateur
+        0 // Durée infinie jusqu'à action utilisateur (ne pas changer)
     );
     
     // Ajouter des boutons d'action à la notification
@@ -200,8 +201,7 @@ async function deleteTransaction(id) {
                 showNotification(
                     'success',
                     'Transaction supprimée',
-                    `"${transaction.description}" a été supprimé avec succès.`,
-                    3000
+                    `"${transaction.description}" a été supprimé avec succès.`
                 );
                 
             } catch (e) {
@@ -211,8 +211,7 @@ async function deleteTransaction(id) {
                 showNotification(
                     'error',
                     'Erreur',
-                    'Impossible de supprimer la transaction. Veuillez réessayer.',
-                    5000
+                    'Impossible de supprimer la transaction. Veuillez réessayer.'
                 );
             }
             
@@ -250,7 +249,7 @@ function ensureNotificationContainer() {
     return container;
 }
 
-function showNotification(type, title, message, duration = 4000) {
+function showNotification(type, title, message, duration = DEFAULT_NOTIFICATION_DURATION) {
     const container = ensureNotificationContainer();
     
     const notification = document.createElement('div');
@@ -347,12 +346,12 @@ function hideNotification(notification) {
 
 // Fonction utilitaire pour les erreurs
 function showError(message) {
-    showNotification('error', 'Erreur', message, 5000);
+    showNotification('error', 'Erreur', message);
 }
 
 // Fonction utilitaire pour les succès
 function showSuccess(message, title = 'Succès') {
-    showNotification('success', title, message, 3000);
+    showNotification('success', title, message);
 }
 
 function renderTransactions(transactions) {

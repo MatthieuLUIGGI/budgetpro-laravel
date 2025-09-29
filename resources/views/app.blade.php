@@ -11,19 +11,7 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1><i class="fas fa-chart-pie"></i> BudgetPro</h1>
-            <p>Gestion professionnelle de vos finances</p>
-            <div class="user-menu">
-                <span>Bonjour, {{ Auth::user()->name }}</span>
-                <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                    Déconnexion <i class="fas fa-sign-out-alt"></i>
-                </a>
-                <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                    @csrf
-                </form>
-            </div>
-        </header>
+        @include('layouts.header')
 
         <!-- Le reste du code HTML reste identique à votre version index.html -->
         <div class="dashboard">
@@ -120,6 +108,8 @@
                 <div class="chart" id="monthly-chart"></div>
             </div>
         </div>
+
+        @include('layouts.footer')
     </div>
 
     <!-- Container pour les notifications -->
