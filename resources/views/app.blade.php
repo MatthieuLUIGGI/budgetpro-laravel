@@ -122,6 +122,9 @@
         </div>
     </div>
 
+    <!-- Container pour les notifications -->
+    <div class="notification-container" id="notification-container"></div>
+
     <!-- Script JS chargé via Vite -->
 </body>
 </html>

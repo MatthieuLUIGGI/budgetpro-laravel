@@ -53,13 +53,25 @@ async function loadTransactions() {
 }
 
 async function addTransaction() {
+    // Système de notifications - helpers intégrés ci-dessous si non présents
     const formData = new FormData();
-    formData.append('description', document.getElementById('description').value);
-    formData.append('amount', document.getElementById('amount').value);
+    const descriptionInput = document.getElementById('description');
+    const descriptionValue = descriptionInput.value.trim();
+    formData.append('description', descriptionValue);
+    const amountInput = document.getElementById('amount');
+    const rawAmountValue = amountInput.value.trim();
+    formData.append('amount', rawAmountValue);
     formData.append('type', document.getElementById('type').value);
     formData.append('category', document.getElementById('category').value);
     formData.append('date', document.getElementById('date').value);
     formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+    const button = document.querySelector('#add-transaction button');
+    const originalText = button.innerHTML;
+    
+    // État de chargement
+    button.innerHTML = 'Ajout en cours... <i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
 
     try {
         const response = await fetch('/api/transactions', {
@@ -69,8 +81,10 @@ async function addTransaction() {
 
         if (!response.ok) throw new Error('Erreur lors de l\'ajout');
 
-        document.getElementById('add-transaction').reset();
-        document.getElementById('date').valueAsDate = new Date();
+        const result = await response.json();
+        
+    document.getElementById('add-transaction').reset();
+    document.getElementById('date').valueAsDate = new Date();
         
         // Recharger toutes les transactions
         window.allTransactions = await loadTransactions();
@@ -78,42 +92,267 @@ async function addTransaction() {
         updateDashboard(window.allTransactions);
         updateCharts(window.allTransactions);
         
-        const button = document.querySelector('#add-transaction button');
+        // Notification de succès
+        const finalDescription = (result && result.description) ? result.description : descriptionValue;
+        const apiAmount = (result && typeof result.amount !== 'undefined') ? result.amount : rawAmountValue;
+        let numericAmount = parseFloat(apiAmount);
+        const formattedAmount = isNaN(numericAmount) ? '' : ` ${numericAmount >= 0 ? '+' : ''}${numericAmount.toFixed(2)} €`;
+        showNotification(
+            'success', 
+            'Transaction ajoutée !', 
+            `Ajout de "${finalDescription || 'Sans description'}"${formattedAmount} avec succès.`,
+            3000
+        );
+        
+        // Animation du bouton
         button.innerHTML = 'Ajouté ! <i class="fas fa-check"></i>';
         button.style.background = 'var(--success)';
         
         setTimeout(() => {
-            button.innerHTML = 'Ajouter <i class="fas fa-plus-circle"></i>';
+            button.innerHTML = originalText;
             button.style.background = 'var(--primary)';
+            button.disabled = false;
         }, 2000);
+        
     } catch (e) {
         console.error("Erreur d'ajout", e);
-        alert("Erreur lors de l'ajout de la transaction");
+        
+        // Notification d'erreur
+        showNotification(
+            'error',
+            'Erreur',
+            "Impossible d'ajouter la transaction. Veuillez réessayer.",
+            5000
+        );
+        
+        // Réinitialiser le bouton
+        button.innerHTML = originalText;
+        button.disabled = false;
     }
 }
 
 async function deleteTransaction(id) {
-    if (!confirm('Supprimer cette transaction ?')) return;
+    // Notification de confirmation améliorée
+    const transaction = window.allTransactions.find(t => t.id === id);
+    if (!transaction) return;
     
-    try {
-        const response = await fetch(`/api/transactions/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    const confirmationNotification = showNotification(
+        'warning',
+        'Confirmer la suppression',
+        `Supprimer "${transaction.description}" de "${transaction.amount}"€ ? Cette action est irréversible.`,
+        0 // Durée infinie jusqu'à action utilisateur
+    );
+    
+    // Ajouter des boutons d'action à la notification
+    const actionButtons = document.createElement('div');
+    actionButtons.className = 'notification-actions';
+    actionButtons.style.marginTop = '10px';
+    actionButtons.style.display = 'flex';
+    actionButtons.style.gap = '10px';
+    
+    actionButtons.innerHTML = `
+        <button class="confirm-btn" style="
+            background: var(--expense);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+        ">Oui, supprimer</button>
+        <button class="cancel-btn" style="
+            background: var(--gray);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+        ">Annuler</button>
+    `;
+    
+    confirmationNotification.querySelector('.notification-content').appendChild(actionButtons);
+    
+    // Gérer les clics
+    return new Promise((resolve) => {
+        confirmationNotification.querySelector('.confirm-btn').onclick = async () => {
+            hideNotification(confirmationNotification);
+            
+            try {
+                const response = await fetch(`/api/transactions/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                if (!response.ok) throw new Error('Erreur de suppression');
+
+                // Recharger toutes les transactions
+                window.allTransactions = await loadTransactions();
+                renderTransactions(window.allTransactions);
+                updateDashboard(window.allTransactions);
+                updateCharts(window.allTransactions);
+                
+                // Notification de succès
+                showNotification(
+                    'success',
+                    'Transaction supprimée',
+                    `"${transaction.description}" a été supprimé avec succès.`,
+                    3000
+                );
+                
+            } catch (e) {
+                console.error('Erreur suppression', e);
+                
+                // Notification d'erreur
+                showNotification(
+                    'error',
+                    'Erreur',
+                    'Impossible de supprimer la transaction. Veuillez réessayer.',
+                    5000
+                );
             }
-        });
+            
+            resolve(true);
+        };
+        
+        confirmationNotification.querySelector('.cancel-btn').onclick = () => {
+            hideNotification(confirmationNotification);
+            resolve(false);
+        };
+        
+        // Fermer la notification si on clique sur la croix
+        confirmationNotification.querySelector('.notification-close').onclick = () => {
+            hideNotification(confirmationNotification);
+            resolve(false);
+        };
+    });
+}
 
-        if (!response.ok) throw new Error('Erreur de suppression');
-
-        // Recharger toutes les transactions
-        window.allTransactions = await loadTransactions();
-        renderTransactions(window.allTransactions);
-        updateDashboard(window.allTransactions);
-        updateCharts(window.allTransactions);
-    } catch (e) {
-        console.error('Erreur suppression', e);
-        alert('Erreur lors de la suppression');
+// ================== Système de notifications ==================
+function ensureNotificationContainer() {
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.style.position = 'fixed';
+        container.style.top = '20px';
+        container.style.right = '20px';
+        container.style.zIndex = '9999';
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.gap = '12px';
+        document.body.appendChild(container);
     }
+    return container;
+}
+
+function showNotification(type, title, message, duration = 4000) {
+    const container = ensureNotificationContainer();
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    const icons = {
+        success: 'fas fa-check-circle',
+        error: 'fas fa-exclamation-circle',
+        warning: 'fas fa-exclamation-triangle',
+        info: 'fas fa-info-circle'
+    };
+    
+    notification.innerHTML = `
+        <div class="notification-icon">
+            <i class="${icons[type]}"></i>
+        </div>
+        <div class="notification-content">
+            <div class="notification-title">${title}</div>
+            <div class="notification-message">${message}</div>
+        </div>
+        <button class="notification-close" style="background:none;border:none;color:inherit;cursor:pointer;font-size:14px;padding:4px;" aria-label="Fermer">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="notification-progress" style="height:3px;background:rgba(255,255,255,0.4);position:absolute;left:0;bottom:0;width:100%;overflow:hidden;">
+            <div class="progress-bar" style="height:100%;background:currentColor;transform-origin:left;animation: notification-progress ${duration}ms linear forwards;"></div>
+        </div>
+    `;
+    
+    // Styles de base inline pour éviter dépendance CSS si non ajoutée
+    Object.assign(notification.style, {
+        position: 'relative',
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'flex-start',
+        padding: '14px 16px',
+        borderRadius: '10px',
+        background: 'var(--card-bg, #2d2f39)',
+        color: 'white',
+        boxShadow: '0 8px 24px -4px rgba(0,0,0,0.35)',
+        transform: 'translateX(120%)',
+        opacity: '0',
+        transition: 'transform .45s cubic-bezier(.34,1.56,.64,1), opacity .3s ease',
+        minWidth: '280px',
+        maxWidth: '340px',
+        fontSize: '14px'
+    });
+    
+    // Couleurs par type
+    const typeColors = {
+        success: '#16a34a',
+        error: '#dc2626',
+        warning: '#d97706',
+        info: '#2563eb'
+    };
+    notification.style.borderLeft = `6px solid ${typeColors[type] || '#2563eb'}`;
+    notification.style.color = typeColors[type] || '#2563eb';
+    
+    container.appendChild(notification);
+    
+    // Animation d'entrée
+    setTimeout(() => {
+        notification.classList.add('show');
+        notification.style.transform = 'translateX(0)';
+        notification.style.opacity = '1';
+    }, 100);
+    
+    // Bouton fermer
+    notification.querySelector('.notification-close').onclick = () => hideNotification(notification);
+    
+    // Auto-suppression après la durée spécifiée
+    if (duration > 0) {
+        setTimeout(() => hideNotification(notification), duration);
+    } else {
+        // Retirer la barre de progression si durée infinie
+        const progress = notification.querySelector('.notification-progress');
+        if (progress) progress.remove();
+    }
+    
+    return notification;
+}
+
+function hideNotification(notification) {
+    notification.classList.remove('show');
+    notification.classList.add('hide');
+    notification.style.transform = 'translateX(120%)';
+    notification.style.opacity = '0';
+    
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 400);
+}
+
+// Fonction utilitaire pour les erreurs
+function showError(message) {
+    showNotification('error', 'Erreur', message, 5000);
+}
+
+// Fonction utilitaire pour les succès
+function showSuccess(message, title = 'Succès') {
+    showNotification('success', title, message, 3000);
 }
 
 function renderTransactions(transactions) {
