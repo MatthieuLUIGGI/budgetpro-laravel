@@ -1,5 +1,4 @@
 import './bootstrap';
-import '../css/auth.css';
 
 // Version Laravel avec API AJAX
 document.addEventListener('DOMContentLoaded', async function() {
@@ -73,10 +72,11 @@ async function addTransaction() {
         document.getElementById('add-transaction').reset();
         document.getElementById('date').valueAsDate = new Date();
         
-        const transactions = await loadTransactions();
-        renderTransactions(transactions);
-        updateDashboard(transactions);
-        updateCharts(transactions);
+        // Recharger toutes les transactions
+        window.allTransactions = await loadTransactions();
+        renderTransactions(window.allTransactions);
+        updateDashboard(window.allTransactions);
+        updateCharts(window.allTransactions);
         
         const button = document.querySelector('#add-transaction button');
         button.innerHTML = 'Ajouté ! <i class="fas fa-check"></i>';
@@ -105,10 +105,11 @@ async function deleteTransaction(id) {
 
         if (!response.ok) throw new Error('Erreur de suppression');
 
-        const transactions = await loadTransactions();
-        renderTransactions(transactions);
-        updateDashboard(transactions);
-        updateCharts(transactions);
+        // Recharger toutes les transactions
+        window.allTransactions = await loadTransactions();
+        renderTransactions(window.allTransactions);
+        updateDashboard(window.allTransactions);
+        updateCharts(window.allTransactions);
     } catch (e) {
         console.error('Erreur suppression', e);
         alert('Erreur lors de la suppression');
@@ -184,22 +185,24 @@ function renderTransactions(transactions) {
 }
 
 function updateDashboard(transactions) {
-    const totalIncome = transactions
-        .filter(t => t.amount > 0)
-        .reduce((sum, t) => sum + t.amount, 0);
+    // Convertir tous les montants en nombres et s'assurer qu'ils sont valides
+    const validTransactions = transactions.filter(t => !isNaN(parseFloat(t.amount)));
     
-    const totalExpenses = transactions
-        .filter(t => t.amount < 0)
-        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const totalIncome = validTransactions
+        .filter(t => parseFloat(t.amount) > 0)
+        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    
+    const totalExpenses = validTransactions
+        .filter(t => parseFloat(t.amount) < 0)
+        .reduce((sum, t) => sum + Math.abs(parseFloat(t.amount)), 0);
     
     const totalBalance = totalIncome - totalExpenses;
     
-    
     const totalBalanceElement = document.getElementById('total-balance');
-        document.getElementById('total-income').textContent = `${Number(totalIncome).toFixed(2)} €`;
-        document.getElementById('total-expenses').textContent = `${Number(totalExpenses).toFixed(2)} €`;
-        totalBalanceElement.textContent = `${Number(totalBalance).toFixed(2)} €`;
-        totalBalanceElement.className = `amount ${Number(totalBalance) >= 0 ? 'positive' : 'negative'}`;
+    document.getElementById('total-income').textContent = `${totalIncome.toFixed(2)} €`;
+    document.getElementById('total-expenses').textContent = `${totalExpenses.toFixed(2)} €`;
+    totalBalanceElement.textContent = `${totalBalance.toFixed(2)} €`;
+    totalBalanceElement.className = `amount ${totalBalance >= 0 ? 'positive' : 'negative'}`;
 }
 
 function updateCharts(transactions) {
@@ -207,12 +210,16 @@ function updateCharts(transactions) {
 }
 
 function calculateMonthTotal(transactions) {
-    return transactions.reduce((total, t) => total + Number(t.amount), 0);
+    return transactions.reduce((total, t) => {
+        const amount = parseFloat(t.amount);
+        return total + (isNaN(amount) ? 0 : amount);
+    }, 0);
 }
 
 function initFilters(transactions) {
     // Remplir les années disponibles
     const yearFilter = document.getElementById('year-filter');
+    yearFilter.innerHTML = '<option value="all">Toutes les années</option>';
     const currentYear = new Date().getFullYear();
     
     // Ajouter les 5 dernières années et les 5 prochaines
@@ -226,6 +233,7 @@ function initFilters(transactions) {
     
     // Remplir les mois disponibles
     const monthFilter = document.getElementById('month-filter');
+    monthFilter.innerHTML = '<option value="all">Tous les mois</option>';
     const months = [
         'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
         'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
@@ -240,6 +248,7 @@ function initFilters(transactions) {
     
     // Remplir les catégories disponibles
     const categoryFilter = document.getElementById('category-filter');
+    categoryFilter.innerHTML = '<option value="all">Toutes catégories</option>';
     const categories = [
         'Salaire', 'Argent de poche', 'Investissement', 'Frais carte', 'Courses',
         'Logement', 'Factures', 'Restaurant', 'Transport', 'Loisirs', 'Bien-être', 'Santé', 'Autre'
@@ -253,21 +262,29 @@ function initFilters(transactions) {
     });
 }
 
-
 async function filterTransactions() {
     const monthFilter = document.getElementById('month-filter').value;
     const yearFilter = document.getElementById('year-filter').value;
     const categoryFilter = document.getElementById('category-filter').value;
+    
     let transactions = window.allTransactions.slice();
+    
     if (monthFilter !== 'all') {
-        transactions = transactions.filter(t => { const d = new Date(t.date); return (d.getMonth()+1) === parseInt(monthFilter); });
+        transactions = transactions.filter(t => { 
+            const d = new Date(t.date); 
+            return (d.getMonth() + 1) === parseInt(monthFilter); 
+        });
     }
     if (yearFilter !== 'all') {
-        transactions = transactions.filter(t => { const d = new Date(t.date); return d.getFullYear() === parseInt(yearFilter); });
+        transactions = transactions.filter(t => { 
+            const d = new Date(t.date); 
+            return d.getFullYear() === parseInt(yearFilter); 
+        });
     }
     if (categoryFilter !== 'all') {
         transactions = transactions.filter(t => t.category === categoryFilter);
     }
+    
     renderTransactions(transactions);
     updateDashboard(transactions);
     updateCharts(transactions);
@@ -281,7 +298,7 @@ function updateMonthlyChart(transactions) {
     const monthlyData = {};
     const currentYear = new Date().getFullYear();
     
-    // Initialiser les 12 mois
+    // Initialiser les 12 mois avec 0
     for (let month = 1; month <= 12; month++) {
         monthlyData[month] = 0;
     }
@@ -291,14 +308,18 @@ function updateMonthlyChart(transactions) {
         const date = new Date(transaction.date);
         if (date.getFullYear() === currentYear) {
             const month = date.getMonth() + 1;
-            monthlyData[month] += transaction.amount;
+            const amount = parseFloat(transaction.amount);
+            if (!isNaN(amount)) {
+                monthlyData[month] += amount;
+            }
         }
     });
     
-    // Trouver le montant maximum pour l'échelle
-    const maxAmount = Math.max(...Object.values(monthlyData).map(Math.abs), 100);
+    // Trouver le montant maximum pour l'échelle (au moins 100 pour éviter division par 0)
+    const amounts = Object.values(monthlyData).map(Math.abs);
+    const maxAmount = Math.max(...amounts, 100);
     
-    // Créer un barre pour chaque mois
+    // Créer une barre pour chaque mois
     for (let month = 1; month <= 12; month++) {
         const amount = monthlyData[month];
         const barHeight = Math.abs(amount) / maxAmount * 100;
@@ -309,7 +330,7 @@ function updateMonthlyChart(transactions) {
         bar.style.background = amount >= 0 ? 'var(--income)' : 'var(--expense)';
         
         bar.innerHTML = `
-            <div class="bar-value">${Number(amount).toFixed(0)}€</div>
+            <div class="bar-value">${amount.toFixed(0)}€</div>
             <div class="bar-label">${['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][month-1]}</div>
         `;
         

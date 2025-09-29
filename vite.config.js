@@ -5,10 +5,9 @@ export default defineConfig({
     plugins: [
         laravel({
             input: [
-                'resources/sass/app.scss',
                 'resources/js/app.js',
-                'resources/css/auth.css',
                 'resources/css/app.css',
+                'resources/css/auth.css',
             ],
             refresh: true,
         }),

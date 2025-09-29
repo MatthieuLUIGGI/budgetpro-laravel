@@ -159,7 +159,14 @@
                         <i class="fas fa-quote-left"></i>
                         "BudgetPro m'a aidé à économiser 30% de plus chaque mois !"
                     </div>
-                    <div class="author">- Marie D., utilisatrice depuis 2023</div>
+                    <div class="author">- Isabelle M., utilisatrice depuis 2025</div>
+                </div>
+                <div class="testimonial">
+                    <div class="quote">
+                        <i class="fas fa-quote-left"></i>
+                        "BudgetPro m'a aidé à mieux gérer mon budget !"
+                    </div>
+                    <div class="author">- Jean-Bernard L., utilisateur depuis 2025</div>
                 </div>
             </div>
         </div>
