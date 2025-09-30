@@ -13,6 +13,76 @@
     --shadow: rgba(0, 0, 0, 0.1);
 }
 
+/* Thème sombre (appliqué via .theme-dark sur body) */
+body.theme-dark {
+    --primary: #6288ff;
+    --secondary: #5468d8;
+    --success: #4cc9f0;
+    --danger: #ff4d99;
+    --warning: #fca311;
+    --light: #1f2330;
+    --dark: #f5f7fa;
+    --gray: #a0a7b4;
+    --income: #40d58a;
+    --expense: #ff6b5e;
+    --card-bg: #2a2f3a;
+    --shadow: rgba(0, 0, 0, 0.55);
+    background: linear-gradient(135deg, #1f2330 0%, #2d3442 100%);
+    color: var(--dark);
+}
+
+body.theme-dark .site-header,
+body.theme-dark .balance-card,
+body.theme-dark .filters,
+body.theme-dark .transaction-form,
+body.theme-dark .transactions,
+body.theme-dark .chart-container {
+    background: var(--card-bg);
+    color: var(--dark);
+}
+
+body.theme-dark .transaction-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+body.theme-dark .transaction-item {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+body.theme-dark .main-nav a {
+    background: rgba(255, 255, 255, 0.06);
+}
+body.theme-dark .main-nav a.active {
+    background: rgba(255, 255, 255, 0.18);
+}
+body.theme-dark .notification {
+    background: var(--card-bg);
+}
+
+/* Bouton toggle thème */
+.theme-toggle {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border: none;
+    color: #fff;
+    padding: 0.55rem 0.7rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: all 0.25s ease;
+}
+.theme-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+.theme-toggle:active {
+    transform: translateY(0);
+}
+body.theme-dark .theme-toggle {
+    background: linear-gradient(135deg, #3f4a66, #54617d);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -169,8 +239,37 @@ header p {
     color: var(--primary);
 }
 
+.transaction-form h2 i,
+.transactions h2 i,
+.chart-container h2 i,
+.balance-card h2 i {
+    margin-right: 6px;
+    color: var(--primary);
+}
+
+label i {
+    margin-right: 6px;
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
 .form-group {
     margin-bottom: 15px;
+}
+
+/* Duo sur une même ligne (Type + Récurrence) */
+.form-row-duo {
+    display: flex;
+    gap: 15px;
+}
+.form-row-duo .form-group {
+    flex: 1;
+    margin-bottom: 15px;
+}
+@media (max-width: 640px) {
+    .form-row-duo {
+        flex-direction: column;
+    }
 }
 
 .form-group label {

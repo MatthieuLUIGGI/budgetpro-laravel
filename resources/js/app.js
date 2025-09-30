@@ -12,6 +12,23 @@ async function initApp() {
     // Initialiser la date du jour
     document.getElementById('date').valueAsDate = new Date();
 
+    // Initialiser bascule thème
+    initThemeToggle();
+    enhanceSelectsWithIcons();
+
+    // Gestion affichage récurrence
+    const recurringSelect = document.getElementById('recurring');
+    const recurrenceDayWrapper = document.getElementById('recurrence-day-wrapper');
+    if (recurringSelect) {
+        recurringSelect.addEventListener('change', () => {
+            if (recurringSelect.value === 'yes') {
+                recurrenceDayWrapper.style.display = 'block';
+            } else {
+                recurrenceDayWrapper.style.display = 'none';
+            }
+        });
+    }
+
     // Charger les transactions depuis l'API
     window.allTransactions = await loadTransactions();
 
@@ -33,6 +50,96 @@ async function initApp() {
     document.getElementById('month-filter').addEventListener('change', filterTransactions);
     document.getElementById('year-filter').addEventListener('change', filterTransactions);
     document.getElementById('category-filter').addEventListener('change', filterTransactions);
+}
+
+function initThemeToggle() {
+    const toggleBtn = document.getElementById('theme-toggle');
+    if (!toggleBtn) return;
+    const saved = localStorage.getItem('bp_theme');
+    if (saved === 'dark') {
+        document.body.classList.add('theme-dark');
+        toggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+    }
+    toggleBtn.addEventListener('click', () => {
+        const dark = document.body.classList.toggle('theme-dark');
+        localStorage.setItem('bp_theme', dark ? 'dark' : 'light');
+        toggleBtn.innerHTML = dark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        showNotification('info', 'Thème', dark ? 'Thème sombre activé' : 'Thème clair activé');
+    });
+}
+
+// Amélioration visuelle des selects avec pseudo icônes (préfixe Unicode)
+function enhanceSelectsWithIcons(includeFilters = false) {
+    const map = {
+        'income': '💰 ',
+        'expense': '🧾 ',
+        'Salaire': '💼 ',
+        'Argent de poche': '🪙 ',
+        'Investissement': '📈 ',
+        'Frais carte': '💳 ',
+        'Alimentation': '🛒 ',
+        'Courses': '🛒 ',
+        'Logement': '🏠 ',
+        'Factures': '🧾 ',
+        'Restaurant': '🍽️ ',
+        'Transport': '🚌 ',
+        'Loisirs': '🎮 ',
+        'Bien-être': '💆 ',
+        'Santé': '🩺 ',
+        'Autre': '📁 '
+    };
+    // Type select
+    const typeSel = document.getElementById('type');
+    if (typeSel) {
+        for (const opt of typeSel.options) {
+            const base = opt.value === 'income' ? 'Revenu' : opt.value === 'expense' ? 'Dépense' : opt.textContent;
+            opt.textContent = (map[opt.value] || '') + base;
+        }
+    }
+    // Category select
+    const catSel = document.getElementById('category');
+    if (catSel) {
+        for (const opt of catSel.options) {
+            const label = opt.textContent.trim();
+            // Éviter double icône
+            if (!/^\p{Extended_Pictographic}/u.test(label)) {
+                opt.textContent = (map[label] || '') + label;
+            }
+        }
+    }
+
+    if (includeFilters) {
+        // Filtres
+        const catFilter = document.getElementById('category-filter');
+        if (catFilter) {
+            for (const opt of catFilter.options) {
+                const label = opt.textContent.trim();
+                if (opt.value === 'all') {
+                    if (!/^\p{Extended_Pictographic}/u.test(label)) opt.textContent = '🌐 ' + label;
+                } else if (!/^\p{Extended_Pictographic}/u.test(label)) {
+                    opt.textContent = (map[label] || '') + label;
+                }
+            }
+        }
+        const monthFilter = document.getElementById('month-filter');
+        if (monthFilter) {
+            for (const opt of monthFilter.options) {
+                const label = opt.textContent.trim();
+                if (!/^\p{Extended_Pictographic}/u.test(label)) {
+                    opt.textContent = (opt.value === 'all' ? '📅 ' : '📅 ') + label;
+                }
+            }
+        }
+        const yearFilter = document.getElementById('year-filter');
+        if (yearFilter) {
+            for (const opt of yearFilter.options) {
+                const label = opt.textContent.trim();
+                if (!/^\p{Extended_Pictographic}/u.test(label)) {
+                    opt.textContent = (opt.value === 'all' ? '🗓️ ' : '🗓️ ') + label;
+                }
+            }
+        }
+    }
 }
 
 async function loadTransactions() {
@@ -67,6 +174,13 @@ async function addTransaction() {
     formData.append('type', document.getElementById('type').value);
     formData.append('category', document.getElementById('category').value);
     formData.append('date', document.getElementById('date').value);
+    // Récurrence
+    const recurringValue = document.getElementById('recurring')?.value || 'no';
+    formData.append('is_recurring', recurringValue === 'yes' ? 1 : 0);
+    if (recurringValue === 'yes') {
+        const recDay = document.getElementById('recurrence-day').value;
+        formData.append('recurrence_day', recDay);
+    }
     formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
 
     const button = document.querySelector('#add-transaction button');
@@ -407,8 +521,8 @@ function renderTransactions(transactions) {
             const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
             transactionItem.innerHTML = `
                 <div class="transaction-details">
-                    <h3>${transaction.description}</h3>
-                    <p>${formattedDate} • ${transaction.category}</p>
+                    <h3>${transaction.description} ${transaction.is_recurring ? '<i title="Modèle récurrent" class="fas fa-sync-alt" style="font-size:0.75rem;color:var(--primary);"></i>' : ''}</h3>
+                    <p>${formattedDate} • ${transaction.category}${transaction.is_recurring && transaction.recurrence_day ? ' • J'+transaction.recurrence_day : ''}</p>
                 </div>
                 <div class="transaction-amount ${Number(transaction.amount) >= 0 ? 'income-amount' : 'expense-amount'}">
                     ${Number(transaction.amount) >= 0 ? '+' : ''}${Number(transaction.amount).toFixed(2)} €
@@ -498,6 +612,9 @@ function initFilters(transactions) {
         option.textContent = category;
         categoryFilter.appendChild(option);
     });
+
+    // Ajouter les icônes après population
+    enhanceSelectsWithIcons(true);
 }
 
 async function filterTransactions() {

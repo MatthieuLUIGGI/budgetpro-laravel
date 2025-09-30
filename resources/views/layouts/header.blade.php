@@ -14,6 +14,9 @@
     <div class="user-menu">
         @auth
             <span class="username">Bonjour, {{ Auth::user()->name }}</span>
+            <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Basculer thème" title="Basculer clair/sombre">
+                <i class="fas fa-moon"></i>
+            </button>
             <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                 Déconnexion <i class="fas fa-sign-out-alt"></i>
             </a>

@@ -16,15 +16,15 @@
         <!-- Le reste du code HTML reste identique à votre version index.html -->
         <div class="dashboard">
             <div class="balance-card">
-                <h2>Solde Total</h2>
+                <h2><i class="fas fa-wallet" aria-hidden="true"></i> Solde Total</h2>
                 <div class="amount" id="total-balance">0,00 €</div>
                 <div class="summary">
                     <div class="income">
-                        <span>Revenus</span>
+                        <span><i class="fas fa-arrow-trend-up" aria-hidden="true"></i> Revenus</span>
                         <span id="total-income">0,00 €</span>
                     </div>
                     <div class="expenses">
-                        <span>Dépenses</span>
+                        <span><i class="fas fa-arrow-trend-down" aria-hidden="true"></i> Dépenses</span>
                         <span id="total-expenses">0,00 €</span>
                     </div>
                 </div>
@@ -32,17 +32,17 @@
 
             <div class="filters">
                 <div class="filter-group">
-                    <label for="month-filter">Mois:</label>
+                    <label for="month-filter"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Mois:</label>
                     <select id="month-filter">
                         <option value="all">Tous les mois</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label for="year-filter">Année:</label>
+                    <label for="year-filter"><i class="fas fa-calendar" aria-hidden="true"></i> Année:</label>
                     <select id="year-filter"></select>
                 </div>
                 <div class="filter-group">
-                    <label for="category-filter">Catégorie:</label>
+                    <label for="category-filter"><i class="fas fa-tags" aria-hidden="true"></i> Catégorie:</label>
                     <select id="category-filter">
                         <option value="all">Toutes catégories</option>
                     </select>
@@ -52,26 +52,45 @@
 
         <div class="content">
             <div class="transaction-form">
-                <h2>Nouvelle Transaction</h2>
+                <h2><i class="fas fa-plus-circle" aria-hidden="true"></i> Nouvelle Transaction</h2>
                 <form id="add-transaction">
                     @csrf
                     <div class="form-group">
-                        <label for="description">Description</label>
+                        <label for="description"><i class="fas fa-file-lines" aria-hidden="true"></i> Description</label>
                         <input type="text" id="description" required>
                     </div>
                     <div class="form-group">
-                        <label for="amount">Montant (€)</label>
+                        <label for="amount"><i class="fas fa-euro-sign" aria-hidden="true"></i> Montant (€)</label>
                         <input type="number" id="amount" step="0.01" required>
                     </div>
-                    <div class="form-group">
-                        <label for="type">Type</label>
-                        <select id="type" required>
-                            <option value="income">Revenu</option>
-                            <option value="expense">Dépense</option>
+                    <div class="form-row-duo">
+                        <div class="form-group">
+                            <label for="type"><i class="fas fa-exchange-alt" aria-hidden="true"></i> Type</label>
+                            <select id="type" required>
+                                <option value="income">Revenu</option>
+                                <option value="expense">Dépense</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="recurring"><i class="fas fa-sync" aria-hidden="true"></i> Récurrence</label>
+                            <select id="recurring" required>
+                                <option value="no" selected>Non</option>
+                                <option value="yes">Oui</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" id="recurrence-day-wrapper" style="display:none;">
+                        <label for="recurrence-day"><i class="fas fa-calendar-day" aria-hidden="true"></i> Jour du mois</label>
+                        <select id="recurrence-day">
+                            <!-- Options 1..31 générées côté client si besoin -->
+                            @for ($d = 1; $d <= 31; $d++)
+                                <option value="{{$d}}">{{$d}}</option>
+                            @endfor
                         </select>
+                        <small style="display:block;margin-top:4px;color:#888;font-size:12px;">La transaction sera automatiquement ajoutée chaque mois à cette date (ajustée si le mois est plus court).</small>
                     </div>
                     <div class="form-group">
-                        <label for="category">Catégorie</label>
+                        <label for="category"><i class="fas fa-tag" aria-hidden="true"></i> Catégorie</label>
                         <select id="category" required>
                             <option value="Salaire">Salaire</option>
                             <option value="Argent de poche">Argent de poche</option>
@@ -89,7 +108,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="date">Date</label>
+                        <label for="date"><i class="fas fa-calendar-day" aria-hidden="true"></i> Date</label>
                         <input type="date" id="date" required>
                     </div>
                     <button type="submit">Ajouter <i class="fas fa-plus-circle"></i></button>
@@ -97,14 +116,14 @@
             </div>
 
             <div class="transactions">
-                <h2>Historique des Transactions</h2>
+                <h2><i class="fas fa-list-ul" aria-hidden="true"></i> Historique des Transactions</h2>
                 <div class="transaction-list" id="transaction-list"></div>
             </div>
         </div>
 
         <div class="charts">
             <div class="chart-container">
-                <h2>Évolution Mensuelle</h2>
+                <h2><i class="fas fa-chart-line" aria-hidden="true"></i> Évolution Mensuelle</h2>
                 <div class="chart" id="monthly-chart"></div>
             </div>
         </div>
