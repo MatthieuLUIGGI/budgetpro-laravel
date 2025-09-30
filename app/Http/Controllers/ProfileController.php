@@ -34,4 +34,28 @@ class ProfileController extends Controller
 
         return redirect()->route('profile.edit')->with('status','Profil mis à jour avec succès');
     }
+
+    public function destroy(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'password_confirm' => ['required','string'],
+        ]);
+
+        if(!\Hash::check($request->input('password_confirm'), $user->password)) {
+            return back()->withErrors(['password_confirm' => 'Mot de passe incorrect'])->withInput();
+        }
+
+        Auth::logout();
+
+        // Suppression en cascade: transactions liées (clé étrangère onDelete cascade)
+        $user->delete();
+
+        // Invalidation de la session
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/')->with('status','Compte supprimé avec succès.');
+    }
 }
