@@ -15,9 +15,7 @@ class Transaction extends Model
         'amount',
         'type',
         'category',
-        'date',
-        'is_recurring',
-        'recurrence_day'
+        'date'
     ];
 
     protected $casts = [

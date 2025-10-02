@@ -174,13 +174,6 @@ async function addTransaction() {
     formData.append('type', document.getElementById('type').value);
     formData.append('category', document.getElementById('category').value);
     formData.append('date', document.getElementById('date').value);
-    // Récurrence
-    const recurringValue = document.getElementById('recurring')?.value || 'no';
-    formData.append('is_recurring', recurringValue === 'yes' ? 1 : 0);
-    if (recurringValue === 'yes') {
-        const recDay = document.getElementById('recurrence-day').value;
-        formData.append('recurrence_day', recDay);
-    }
     formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
 
     const button = document.querySelector('#add-transaction button');

@@ -16,8 +16,6 @@ return new class extends Migration
             $table->enum('type', ['income', 'expense']);
             $table->string('category');
             $table->date('date');
-            $table->boolean('is_recurring')->default(false);
-            $table->unsignedTinyInteger('recurrence_day')->nullable(); // 1..31
             $table->timestamps();
         });
     }

@@ -239,37 +239,8 @@ header p {
     color: var(--primary);
 }
 
-.transaction-form h2 i,
-.transactions h2 i,
-.chart-container h2 i,
-.balance-card h2 i {
-    margin-right: 6px;
-    color: var(--primary);
-}
-
-label i {
-    margin-right: 6px;
-    color: var(--primary);
-    font-size: 0.9rem;
-}
-
 .form-group {
     margin-bottom: 15px;
-}
-
-/* Duo sur une même ligne (Type + Récurrence) */
-.form-row-duo {
-    display: flex;
-    gap: 15px;
-}
-.form-row-duo .form-group {
-    flex: 1;
-    margin-bottom: 15px;
-}
-@media (max-width: 640px) {
-    .form-row-duo {
-        flex-direction: column;
-    }
 }
 
 .form-group label {

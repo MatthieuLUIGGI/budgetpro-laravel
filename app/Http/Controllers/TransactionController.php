@@ -24,9 +24,7 @@ class TransactionController extends Controller
             'amount' => 'required|numeric|min:0',
             'type' => 'required|in:income,expense',
             'category' => 'required|string|max:255',
-            'date' => 'required|date',
-            'is_recurring' => 'nullable|boolean',
-            'recurrence_day' => 'nullable|integer|min:1|max:31'
+            'date' => 'required|date'
         ]);
 
         $transaction = Transaction::create([
@@ -35,9 +33,7 @@ class TransactionController extends Controller
             'amount' => $request->type === 'income' ? $request->amount : -$request->amount,
             'type' => $request->type,
             'category' => $request->category,
-            'date' => $request->date,
-            'is_recurring' => (bool)$request->is_recurring,
-            'recurrence_day' => $request->is_recurring ? ($request->recurrence_day ?? (int)\Illuminate\Support\Carbon::parse($request->date)->format('d')) : null
+            'date' => $request->date
         ]);
 
         return response()->json($transaction, 201);

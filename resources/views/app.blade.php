@@ -12,8 +12,6 @@
 <body>
     <div class="container">
         @include('layouts.header')
-
-        <!-- Le reste du code HTML reste identique à votre version index.html -->
         <div class="dashboard">
             <div class="balance-card">
                 <h2><i class="fas fa-wallet" aria-hidden="true"></i> Solde Total</h2>
@@ -71,23 +69,6 @@
                                 <option value="expense">Dépense</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="recurring"><i class="fas fa-sync" aria-hidden="true"></i> Récurrence</label>
-                            <select id="recurring" required>
-                                <option value="no" selected>Non</option>
-                                <option value="yes">Oui</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group" id="recurrence-day-wrapper" style="display:none;">
-                        <label for="recurrence-day"><i class="fas fa-calendar-day" aria-hidden="true"></i> Jour du mois</label>
-                        <select id="recurrence-day">
-                            <!-- Options 1..31 générées côté client si besoin -->
-                            @for ($d = 1; $d <= 31; $d++)
-                                <option value="{{$d}}">{{$d}}</option>
-                            @endfor
-                        </select>
-                        <small style="display:block;margin-top:4px;color:#888;font-size:12px;">La transaction sera automatiquement ajoutée chaque mois à cette date (ajustée si le mois est plus court).</small>
                     </div>
                     <div class="form-group">
                         <label for="category"><i class="fas fa-tag" aria-hidden="true"></i> Catégorie</label>
@@ -99,7 +80,7 @@
                             <option value="Alimentation">Courses</option>
                             <option value="Logement">Logement</option>
                             <option value="Factures">Factures</option>
-                            <option value="Restaurant">Restaurants</option>
+                            <option value="Restaurant">Restaurant</option>
                             <option value="Transport">Transport</option>
                             <option value="Loisirs">Loisirs</option>
                             <option value="Bien-être">Bien-être</option>
