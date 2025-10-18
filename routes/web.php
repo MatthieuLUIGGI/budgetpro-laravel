@@ -11,7 +11,13 @@ Route::get('/', function () {
 
 Route::prefix('api')->middleware('auth')->group(function () {
     Route::get('/transactions', [TransactionController::class, 'index']);
+    Route::get('/transactions/export', [TransactionController::class, 'export']);
+    Route::post('/transactions/import/preview', [TransactionController::class, 'importPreview']);
+    Route::post('/transactions/import/commit', [TransactionController::class, 'importCommit']);
+    Route::get('/budgets', [\App\Http\Controllers\BudgetController::class, 'index']);
+    Route::post('/budgets', [\App\Http\Controllers\BudgetController::class, 'store']);
     Route::post('/transactions', [TransactionController::class, 'store']);
+    Route::put('/transactions/{id}', [TransactionController::class, 'update']);
     Route::delete('/transactions/{id}', [TransactionController::class, 'destroy']);
     Route::get('/dashboard', [TransactionController::class, 'dashboard']);
 });

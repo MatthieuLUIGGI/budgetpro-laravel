@@ -83,6 +83,26 @@ Lancer les tests unitaires :
 php artisan test
 ```
 
+## Récurrence des transactions
+
+-   Lors de la création d'une transaction, cochez "récurrente" et choisissez la fréquence (journalier, hebdo, mensuel, annuel), l'intervalle (ex. tous les 2 mois) et, pour le mensuel/annuel, le jour du mois (par défaut le jour de la transaction).
+-   La date d'ancrage de la récurrence est la date de la transaction (et non la date de création).
+-   Un job planifié crée automatiquement les occurrences dues chaque jour via la commande `transactions:generate-recurring`.
+
+Planification côté serveur (Laravel Scheduler):
+
+1. Configurer la tâche cron qui lance le scheduler chaque minute sur le serveur:
+
+```
+* * * * * php /path/to/artisan schedule:run >> /dev/null 2>&1
+```
+
+En local, vous pouvez utiliser:
+
+```pwsh
+php artisan schedule:work
+```
+
 ## Licence
 
 Ce projet est sous licence MIT.

@@ -76,4 +76,13 @@
 @push('styles')
     @vite('resources/css/profile.css')
 @endpush
+@push('scripts')
+<script>
+    // Applique le thème sombre stocké si besoin (au cas où app.js chargerait après)
+    (function() {
+        const saved = localStorage.getItem('bp_theme');
+        if (saved === 'dark') document.body.classList.add('theme-dark');
+    })();
+</script>
+@endpush
 @endsection

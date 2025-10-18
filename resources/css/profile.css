@@ -91,3 +91,22 @@ hr {
         padding: 20px;
     }
 }
+
+/* Variantes thème sombre héritées des variables CSS */
+body.theme-dark .profile-card {
+    background: var(--card-bg);
+    color: var(--dark);
+}
+body.theme-dark .profile-form input {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: var(--dark);
+}
+body.theme-dark .danger-zone {
+    background: rgba(255, 77, 79, 0.08) !important;
+    border-color: rgba(255, 77, 79, 0.45) !important;
+}
+body.theme-dark #deleteAccountModal > div {
+    background: var(--card-bg) !important;
+    color: var(--dark);
+}

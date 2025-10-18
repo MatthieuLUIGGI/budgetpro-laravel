@@ -9,8 +9,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 async function initApp() {
-    // Initialiser la date du jour
-    document.getElementById('date').valueAsDate = new Date();
+    // Initialiser la date du jour si le champ existe (page dashboard)
+    const dateEl = document.getElementById('date');
+    if (dateEl) {
+        dateEl.valueAsDate = new Date();
+    }
 
     // Initialiser bascule thème
     initThemeToggle();
@@ -18,38 +21,57 @@ async function initApp() {
 
     // Gestion affichage récurrence
     const recurringSelect = document.getElementById('recurring');
+    const recurrenceFields = document.getElementById('recurrence-fields');
     const recurrenceDayWrapper = document.getElementById('recurrence-day-wrapper');
-    if (recurringSelect) {
-        recurringSelect.addEventListener('change', () => {
-            if (recurringSelect.value === 'yes') {
+    const recurrenceFrequency = document.getElementById('recurrence_frequency');
+    if (recurringSelect && recurrenceFields && recurrenceFrequency) {
+        const updateVisibility = () => {
+            const isRecurring = recurringSelect.value === 'yes';
+            recurrenceFields.style.display = isRecurring ? 'block' : 'none';
+            const freq = recurrenceFrequency.value;
+            if (isRecurring && (freq === 'monthly' || freq === 'yearly')) {
                 recurrenceDayWrapper.style.display = 'block';
             } else {
                 recurrenceDayWrapper.style.display = 'none';
             }
-        });
+        };
+        recurringSelect.addEventListener('change', updateVisibility);
+        recurrenceFrequency.addEventListener('change', updateVisibility);
+        updateVisibility();
     }
 
-    // Charger les transactions depuis l'API
-    window.allTransactions = await loadTransactions();
+    // Si on est sur la page dashboard (éléments présents)
+    const hasTransactionsUI = document.getElementById('transaction-list');
+    if (hasTransactionsUI) {
+        // Initialiser les filtres (liste locale le temps du premier chargement)
+        initFilters([]);
 
-    // Initialiser les filtres
-    initFilters(window.allTransactions);
+        // Charger la 1ère page via API paginée
+        await applyFilters(1);
 
-    // Affichage initial
-    renderTransactions(window.allTransactions);
-    updateDashboard(window.allTransactions);
-    updateCharts(window.allTransactions);
+        // Gestion du formulaire
+        const addForm = document.getElementById('add-transaction');
+        if (addForm) {
+            addForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                addTransaction();
+            });
+        }
 
-    // Gestion du formulaire
-    document.getElementById('add-transaction').addEventListener('submit', function(e) {
-        e.preventDefault();
-        addTransaction();
-    });
+        // Gestion des filtres
+        const monthFilter = document.getElementById('month-filter');
+        const yearFilter = document.getElementById('year-filter');
+        const categoryFilter = document.getElementById('category-filter');
+        if (monthFilter) monthFilter.addEventListener('change', async () => await applyFilters(1));
+        if (yearFilter) yearFilter.addEventListener('change', async () => await applyFilters(1));
+        if (categoryFilter) categoryFilter.addEventListener('change', async () => await applyFilters(1));
 
-    // Gestion des filtres
-    document.getElementById('month-filter').addEventListener('change', filterTransactions);
-    document.getElementById('year-filter').addEventListener('change', filterTransactions);
-    document.getElementById('category-filter').addEventListener('change', filterTransactions);
+        // Pagination
+        const prev = document.getElementById('prev-page');
+        const next = document.getElementById('next-page');
+        if (prev) prev.addEventListener('click', async () => await changePage(-1));
+        if (next) next.addEventListener('click', async () => await changePage(1));
+    }
 }
 
 function initThemeToggle() {
@@ -142,24 +164,70 @@ function enhanceSelectsWithIcons(includeFilters = false) {
     }
 }
 
-async function loadTransactions() {
+function buildQuery(page = 1) {
+    const month = document.getElementById('month-filter')?.value;
+    const year = document.getElementById('year-filter')?.value;
+    const category = document.getElementById('category-filter')?.value;
+    const params = new URLSearchParams();
+    if (month && month !== 'all') params.set('month', month);
+    if (year && year !== 'all') params.set('year', year);
+    if (category && category !== 'all') params.set('category', category);
+    params.set('per_page', '25');
+    params.set('page', String(page));
+    return params;
+}
+
+async function applyFilters(page = 1) {
     try {
-        const response = await fetch('/api/transactions', {
+        const params = buildQuery(page);
+        const response = await fetch(`/api/transactions?${params.toString()}`, {
             headers: {
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
-        
         if (!response.ok) throw new Error('Erreur de chargement');
-        
-        let transactions = await response.json();
-        transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-        return transactions;
+        const payload = await response.json();
+        let list = payload;
+        if (payload && payload.data) {
+            list = payload.data;
+            updatePaginationUI(payload);
+        } else {
+            const pag = document.getElementById('pagination');
+            if (pag) pag.style.display = 'none';
+        }
+        list.sort((a, b) => new Date(b.date) - new Date(a.date));
+        window.allTransactions = list;
+        renderTransactions(window.allTransactions);
+        updateDashboard(window.allTransactions);
+        updateCharts(window.allTransactions);
     } catch (e) {
         console.error('Erreur chargement transactions', e);
-        return [];
+        window.allTransactions = [];
+        renderTransactions([]);
+        updateDashboard([]);
+        updateCharts([]);
     }
+}
+
+function updatePaginationUI(paginated) {
+    const p = document.getElementById('pagination');
+    if (!p) return;
+    p.style.display = 'flex';
+    const info = document.getElementById('page-info');
+    if (info) info.textContent = `Page ${paginated.current_page} / ${paginated.last_page}`;
+    const prev = document.getElementById('prev-page');
+    const next = document.getElementById('next-page');
+    if (prev) prev.disabled = paginated.current_page <= 1;
+    if (next) next.disabled = paginated.current_page >= paginated.last_page;
+    p.dataset.current = String(paginated.current_page);
+}
+
+async function changePage(delta) {
+    const p = document.getElementById('pagination');
+    const cur = parseInt(p?.dataset.current || '1', 10);
+    const next = Math.max(1, cur + delta);
+    await applyFilters(next);
 }
 
 async function addTransaction() {
@@ -174,6 +242,21 @@ async function addTransaction() {
     formData.append('type', document.getElementById('type').value);
     formData.append('category', document.getElementById('category').value);
     formData.append('date', document.getElementById('date').value);
+    // Champs de récurrence
+    const uiRecurring = document.getElementById('recurring');
+    if (uiRecurring && uiRecurring.value === 'yes') {
+        formData.append('is_recurring', '1');
+        const freq = document.getElementById('recurrence_frequency').value;
+        formData.append('recurrence_frequency', freq);
+        const interval = document.getElementById('recurrence_interval').value || '1';
+        formData.append('recurrence_interval', interval);
+        if (freq === 'monthly' || freq === 'yearly') {
+            const day = document.getElementById('recurrence_day').value;
+            if (day) formData.append('recurrence_day', day);
+        }
+        const end = document.getElementById('recurrence_end_date').value;
+        if (end) formData.append('recurrence_end_date', end);
+    }
     formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
 
     const button = document.querySelector('#add-transaction button');
@@ -196,11 +279,9 @@ async function addTransaction() {
     document.getElementById('add-transaction').reset();
     document.getElementById('date').valueAsDate = new Date();
         
-        // Recharger toutes les transactions
-        window.allTransactions = await loadTransactions();
-        renderTransactions(window.allTransactions);
-        updateDashboard(window.allTransactions);
-        updateCharts(window.allTransactions);
+    // Recharger la page courante
+    const cur = parseInt(document.getElementById('pagination')?.dataset.current || '1', 10);
+    await applyFilters(cur || 1);
         
         // Notification de succès
         const finalDescription = (result && result.description) ? result.description : descriptionValue;
@@ -298,11 +379,9 @@ async function deleteTransaction(id) {
 
                 if (!response.ok) throw new Error('Erreur de suppression');
 
-                // Recharger toutes les transactions
-                window.allTransactions = await loadTransactions();
-                renderTransactions(window.allTransactions);
-                updateDashboard(window.allTransactions);
-                updateCharts(window.allTransactions);
+                // Recharger la page courante
+                const cur = parseInt(document.getElementById('pagination')?.dataset.current || '1', 10);
+                await applyFilters(cur || 1);
                 
                 // Notification de succès
                 showNotification(
@@ -512,16 +591,22 @@ function renderTransactions(transactions) {
             transactionItem.className = 'transaction-item';
             const date = new Date(transaction.date);
             const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+            const isTemplate = !!transaction.is_recurring && !transaction.parent_id;
+            const isOccurrence = !!transaction.parent_id;
+            const badgesHtml = isTemplate
+                ? '<i title="Modèle récurrent" class="fas fa-sync-alt" style="font-size:0.75rem;color:var(--primary);"></i>'
+                : (isOccurrence ? '<i title="Occurrence récurrente" class="fas fa-sync-alt" style="font-size:0.75rem;color:var(--gray);"></i>' : '');
             transactionItem.innerHTML = `
                 <div class="transaction-details">
-                    <h3>${transaction.description} ${transaction.is_recurring ? '<i title="Modèle récurrent" class="fas fa-sync-alt" style="font-size:0.75rem;color:var(--primary);"></i>' : ''}</h3>
-                    <p>${formattedDate} • ${transaction.category}${transaction.is_recurring && transaction.recurrence_day ? ' • J'+transaction.recurrence_day : ''}</p>
+                    <h3>${transaction.description} ${badgesHtml}</h3>
+                    <p>${formattedDate} • ${transaction.category}${isTemplate && transaction.recurrence_day ? ' • J'+transaction.recurrence_day : ''}</p>
                 </div>
                 <div class="transaction-amount ${Number(transaction.amount) >= 0 ? 'income-amount' : 'expense-amount'}">
                     ${Number(transaction.amount) >= 0 ? '+' : ''}${Number(transaction.amount).toFixed(2)} €
                 </div>
-                <div class="transaction-actions">
-                    <button onclick="deleteTransaction(${transaction.id})"><i class="fas fa-trash"></i></button>
+                <div class="transaction-actions" style="display:flex; gap:8px;">
+                    <button onclick="editTransaction(${transaction.id})" title="Modifier"><i class="fas fa-pen"></i></button>
+                    <button onclick="deleteTransaction(${transaction.id})" title="Supprimer"><i class="fas fa-trash"></i></button>
                 </div>
             `;
             transactionList.appendChild(transactionItem);
@@ -683,6 +768,119 @@ function updateMonthlyChart(transactions) {
         `;
         
         monthlyChart.appendChild(bar);
+    }
+}
+
+// =============== Édition de transaction =================
+window.editTransaction = function(id) {
+    const t = (window.allTransactions || []).find(x => x.id === id);
+    if (!t) return;
+
+    document.getElementById('edit-id').value = t.id;
+    document.getElementById('edit-description').value = t.description || '';
+    document.getElementById('edit-amount').value = Math.abs(parseFloat(t.amount || 0)).toFixed(2);
+    document.getElementById('edit-type').value = (parseFloat(t.amount) >= 0 ? 'income' : 'expense');
+    document.getElementById('edit-category').value = t.category || 'Autre';
+    document.getElementById('edit-date').value = (t.date ? new Date(t.date).toISOString().split('T')[0] : '');
+
+    // Récurrence: n'afficher la section que si c'est un modèle (pas d'édition de récurrence sur une occurrence)
+    const isBase = !t.parent_id;
+    const details = document.getElementById('edit-recurrence-details');
+    if (details) details.style.display = isBase ? 'block' : 'none';
+    if (isBase) {
+        document.getElementById('edit-is-recurring').value = t.is_recurring ? '1' : '0';
+        document.getElementById('edit-recurrence-frequency').value = t.recurrence_frequency || 'monthly';
+        document.getElementById('edit-recurrence-interval').value = t.recurrence_interval || 1;
+        const freq = document.getElementById('edit-recurrence-frequency').value;
+        const dayWrap = document.getElementById('edit-recurrence-day-wrapper');
+        if (freq === 'monthly' || freq === 'yearly') {
+            dayWrap.style.display = 'block';
+            document.getElementById('edit-recurrence-day').value = t.recurrence_day || '';
+        } else {
+            dayWrap.style.display = 'none';
+            document.getElementById('edit-recurrence-day').value = '';
+        }
+        document.getElementById('edit-recurrence-end-date').value = t.recurrence_end_date ? new Date(t.recurrence_end_date).toISOString().split('T')[0] : '';
+    }
+
+    openEditModal();
+};
+
+function openEditModal() {
+    const m = document.getElementById('edit-modal');
+    if (!m) return;
+    m.style.display = 'flex';
+}
+
+function closeEditModal() {
+    const m = document.getElementById('edit-modal');
+    if (!m) return;
+    m.style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const cancelBtn = document.getElementById('edit-cancel');
+    const modal = document.getElementById('edit-modal');
+    const form = document.getElementById('edit-transaction-form');
+    if (cancelBtn) cancelBtn.addEventListener('click', closeEditModal);
+    if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeEditModal(); });
+    if (form) form.addEventListener('submit', submitEditForm);
+    const freqSel = document.getElementById('edit-recurrence-frequency');
+    if (freqSel) freqSel.addEventListener('change', () => {
+        const dayWrap = document.getElementById('edit-recurrence-day-wrapper');
+        const freq = freqSel.value;
+        dayWrap.style.display = (freq === 'monthly' || freq === 'yearly') ? 'block' : 'none';
+    });
+});
+
+async function submitEditForm(e) {
+    e.preventDefault();
+    const id = document.getElementById('edit-id').value;
+    const description = document.getElementById('edit-description').value.trim();
+    const amount = document.getElementById('edit-amount').value.trim();
+    const type = document.getElementById('edit-type').value;
+    const category = document.getElementById('edit-category').value;
+    const date = document.getElementById('edit-date').value;
+
+    const payload = new FormData();
+    payload.append('description', description);
+    payload.append('amount', amount);
+    payload.append('type', type);
+    payload.append('category', category);
+    payload.append('date', date);
+    payload.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    payload.append('_method', 'PUT');
+    // Ajouter les champs de récurrence si base
+    const details = document.getElementById('edit-recurrence-details');
+    if (details && details.style.display !== 'none') {
+        const isRecurring = document.getElementById('edit-is-recurring').value;
+        payload.append('is_recurring', isRecurring);
+        payload.append('recurrence_frequency', document.getElementById('edit-recurrence-frequency').value);
+        payload.append('recurrence_interval', document.getElementById('edit-recurrence-interval').value || '1');
+        const freq = document.getElementById('edit-recurrence-frequency').value;
+        if (freq === 'monthly' || freq === 'yearly') {
+            const day = document.getElementById('edit-recurrence-day').value;
+            if (day) payload.append('recurrence_day', day);
+        }
+        const end = document.getElementById('edit-recurrence-end-date').value;
+        if (end) payload.append('recurrence_end_date', end);
+    }
+
+    try {
+        const resp = await fetch(`/api/transactions/${id}`, { method: 'POST', body: payload });
+        if (!resp.ok) throw new Error('Erreur update');
+        closeEditModal();
+
+        // Recharger
+        window.allTransactions = await loadTransactions();
+        renderTransactions(window.allTransactions);
+        updateDashboard(window.allTransactions);
+        updateCharts(window.allTransactions);
+
+        showNotification('success', 'Transaction modifiée', 'La transaction a été mise à jour.');
+    } catch (err) {
+        console.error(err);
+        showNotification('error', 'Erreur', "Impossible de modifier la transaction.");
     }
 }
 
