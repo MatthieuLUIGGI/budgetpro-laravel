@@ -871,11 +871,9 @@ async function submitEditForm(e) {
         if (!resp.ok) throw new Error('Erreur update');
         closeEditModal();
 
-        // Recharger
-        window.allTransactions = await loadTransactions();
-        renderTransactions(window.allTransactions);
-        updateDashboard(window.allTransactions);
-        updateCharts(window.allTransactions);
+    // Recharger la page courante avec les filtres/pagination actifs
+    const cur = parseInt(document.getElementById('pagination')?.dataset.current || '1', 10);
+    await applyFilters(cur || 1);
 
         showNotification('success', 'Transaction modifiée', 'La transaction a été mise à jour.');
     } catch (err) {

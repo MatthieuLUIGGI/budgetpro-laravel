@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Services\RecurringTransactionService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
@@ -152,7 +153,7 @@ class TransactionController extends Controller
             $transaction->update($data);
         }
 
-        // Si c'est un modèle (parent_id null), accepter la mise à jour des champs de récurrence
+    // Si c'est un modèle (parent_id null), accepter la mise à jour des champs de récurrence
         $isBase = $transaction->parent_id === null;
         if ($isBase && ($request->has('is_recurring') || $request->hasAny(['recurrence_frequency','recurrence_interval','recurrence_day','recurrence_end_date']))) {
             if ($request->has('is_recurring')) {
@@ -186,7 +187,43 @@ class TransactionController extends Controller
             }
         }
 
-        return response()->json($transaction->fresh());
+        // Propager les modifications aux occurrences de la série si transaction récurrente
+        $root = $transaction->parent_id ? $transaction->parent()->first() : $transaction;
+        $shouldPropagate = $root && ($transaction->parent_id !== null || $root->is_recurring);
+        if ($shouldPropagate && $request->hasAny(['description','category','type','amount'])) {
+            $baseType = $request->has('type') ? $request->type : $root->type;
+            $updates = [];
+            if ($request->has('description')) $updates['description'] = $request->description;
+            if ($request->has('category')) $updates['category'] = $request->category;
+            if ($request->has('type')) $updates['type'] = $request->type;
+            if ($request->has('amount')) {
+                $amt = (float) $request->amount;
+                $updates['amount'] = $baseType === 'income' ? abs($amt) : -abs($amt);
+            }
+
+            // Mettre à jour le modèle racine pour rester cohérent avec la série
+            if (!empty($updates)) {
+                $root->fill($updates);
+                // Si seulement le type change sans amount, ajuster le signe du root
+                if ($request->has('type') && !$request->has('amount')) {
+                    $root->amount = $request->type === 'income' ? abs((float)$root->amount) : -abs((float)$root->amount);
+                }
+                $root->save();
+            }
+
+            // Mettre à jour toutes les occurrences existantes
+            $children = Transaction::where('user_id', Auth::id())->where('parent_id', $root->id);
+            $childUpdates = $updates;
+            if ($request->has('type') && !$request->has('amount')) {
+                // Ajuster le signe côté SQL pour toutes les occurrences
+                $childUpdates['amount'] = DB::raw($request->type === 'income' ? 'ABS(amount)' : '-ABS(amount)');
+            }
+            if (!empty($childUpdates)) {
+                $children->update($childUpdates);
+            }
+        }
+
+        return response()->json($root->fresh());
     }
 
     public function dashboard()
