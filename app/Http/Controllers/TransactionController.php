@@ -12,9 +12,18 @@ use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
-    public function index()
+    public function index(RecurringTransactionService $recurringService)
     {
         $q = request();
+        // Génération paresseuse: rattraper les occurrences dues jusqu'à aujourd'hui
+        $bases = Transaction::query()
+            ->where('user_id', Auth::id())
+            ->where('is_recurring', true)
+            ->whereNull('parent_id')
+            ->get();
+        foreach ($bases as $base) {
+            $recurringService->generateDueOccurrences($base);
+        }
         $builder = Transaction::query()->where('user_id', Auth::id());
 
         // Filters
